@@ -4,11 +4,21 @@ set -euo pipefail
 # ============== 基础路径（按你当前项目结构已对齐） ==============
 DATA_ROOT="./datasets/coco/images"                       # 包含 train2014/ 与 val2014/
 ANN_DIR="./m2_annotations"
-CLIP_PT="./.cache/clip/ViT-B-16.pt"                      # CLIP ViT-B/16 权重（jit/state-dict均可）
-TEXT_EMB="./text_embeddings/ram_ViT16_clip_text.pth"     # RAM 的 80 类文本嵌入
+CLIP_PT="./.cache/clip/ViT-B-16.pt"                      # CLIP ViT-B/16 权重
+TEXT_EMB="./text_embeddings/ram_ViT16_clip_text.pth"     # 文本嵌入
 EXP_NAME="fsgr_fix"
 BATCH=32
 WORKERS=4
+
+# ============== 可选：快速评估/限步（跑通/快验用） ==============
+# 取消下面注释可启用“快速评估与限步”
+# export FSGR_FAST_EVAL=1
+# export FSGR_TRAIN_STEPS=200
+# export FSGR_VAL_STEPS=80
+# export FSGR_EVAL_STEPS=80
+# 关闭 Meteor/Spice（避免 Java 依赖）
+unset FSGR_USE_METEOR || true
+unset FSGR_USE_SPICE || true
 
 # ============== 路径检查/兜底 ==============
 echo "[Check] 路径检查..."
@@ -33,6 +43,9 @@ echo "      EXP_NAME        = $EXP_NAME"
 export CUDA_DEVICE_ORDER=PCI_BUS_ID
 export CUDA_VISIBLE_DEVICES=0
 
+# 可通过环境变量 EPOCHS 覆盖（默认 3 轮用于快速确认）
+: "${EPOCHS:=3}"
+
 python -u train_transformer.py \
   --exp_name "$EXP_NAME" \
   --batch_size "$BATCH" \
@@ -43,4 +56,5 @@ python -u train_transformer.py \
   --text_embed_path "$TEXT_EMB" \
   --pre_name "ViT-B/16" \
   --xe_base_lr 2e-4 \
-  --rl_base_lr 1e-5
+  --rl_base_lr 1e-5 \
+  --epochs "$EPOCHS"
